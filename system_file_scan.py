@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 import subprocess as sp
-import pickle, os
+import pickle, os, sys
 
 def get_scan():
     print('Hello')
-    p1 = sp.Popen(['find', '/var/tmp/ldh/working/system_scanning/', '-type', 'f'], stdout = sp.PIPE)
+#    p1 = sp.Popen(['find', '/var/tmp/ldh/working/system_scanning/', '-type', 'f'], stdout = sp.PIPE)
+    p1 = sp.Popen(['find', sys.argv[1], '-type', 'f'], stdout = sp.PIPE)
     out1 = p1.communicate()[0]
     print(len(out1))
     print(type(out1))
@@ -19,7 +20,8 @@ def get_scan():
 def main():
     x = get_scan()
     print(x[0])
-    with open('output_test1', 'wb') as outw:
+#    with open('output_test1', 'wb') as outw:
+    with open(sys.argv[2], 'wb') as outw:
         pickle.dump(x, outw)
 
 if __name__ == '__main__':
