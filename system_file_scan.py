@@ -13,11 +13,15 @@ def get_scan(passed_start):
     for x in list1[0:-1]:
         p1 = sp.Popen(['md5sum', x], stdout = sp.PIPE)
         y = str(p1.communicate()[0])
-        list2.append((x,y[2:].split()[0]))
+
+        p1 = sp.Popen(['stat', x], stdout = sp.PIPE)
+        z = str(p1.communicate()[0])
+
+        list2.append((x,y[2:].split()[0],z))
     return list2
 
 def create_dataframe(passed_list):
-    df = pd.DataFrame(passed_list, columns = ['filename_full_path', 'md5_hash'])
+    df = pd.DataFrame(passed_list, columns = ['filename_full_path', 'md5_hash', 'stat'])
 #    df = pd.DataFrame(passed_list)
     return df
 
