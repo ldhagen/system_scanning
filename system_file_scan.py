@@ -9,6 +9,7 @@ def get_scan(passed_start):
     list1 = []
     for x in out1[2:-1].split(r'\n'):
         list1.append(x)
+        print(x)
     list2 = []
     for x in list1[0:-1]:
         p1 = sp.Popen(['md5sum', x], stdout = sp.PIPE)
