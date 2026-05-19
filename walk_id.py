@@ -16,22 +16,42 @@ import sys
 import pickle
 from datetime import datetime as dt
 import shutil
+import argparse
 
 # Constants
 DEFAULT_START = '.'
-DEFAULT_OUTPUT = './defaultDTGscan.pkl'
 FILENAME_LENGTH_CONST = 29
 FILENAME_PREFIX_CONST = 'ldh'
 FILENAME_SUFFIX_CONST = '.jpg'
 FILENAME_DTG_FORMAT_CONST = '%a_%d_%b_%y_%H_%M_%S' 
 
-def walk_id(start_dir=DEFAULT_START, out_pickle_name=DEFAULT_OUTPUT):
+def walk_id(start_dir=DEFAULT_START, out_pickle_name=None):
     """
     Walks directory tree looking for constants above, confirms, 
     converts to DTG, populates dict, and persists as pickle file.
     """
+    if out_pickle_name is None:
+        dtg = dt.now().strftime('%Y%m%d_%H%M%S')
+        out_pickle_name = f'./DTGscan_{dtg}.pkl'
+
     found_dict = {}
-    for root, _, files in os.walk(start_dir):
+    
+    try:
+        start_dev = os.stat(start_dir).st_dev
+    except OSError as e:
+        print(f"Error accessing start directory {start_dir}: {e}")
+        return
+
+    for root, dirs, files in os.walk(start_dir):
+        # Stay on the same filesystem to avoid mounted drives
+        def is_same_dev(d):
+            try:
+                return os.stat(os.path.join(root, d)).st_dev == start_dev
+            except OSError:
+                return False
+        
+        dirs[:] = [d for d in dirs if is_same_dev(d)]
+
         for file in files:
             if file.endswith(FILENAME_SUFFIX_CONST):
                 if len(file) == FILENAME_LENGTH_CONST:
@@ -83,7 +103,11 @@ def copy_files(pkl_dict_path, target_dir, spacing=3600):
             seq_count += 1
 
 if __name__ == '__main__':
-    if len(sys.argv) < 3:
-        print("Usage: walk_id.py <start_dir> <output_pickle>")
-    else:
-        walk_id(sys.argv[1], sys.argv[2])
+    parser = argparse.ArgumentParser(description="Walk directory tree and identify DTG formatted filenames.")
+    parser.add_argument('start_dir', nargs='?', default=DEFAULT_START, 
+                        help=f'The root directory to start the search (default: {DEFAULT_START})')
+    parser.add_argument('output_pickle', nargs='?', default=None, 
+                        help='The name of the output pickle file (default: DTGscan_YYYYMMDD_HHMMSS.pkl)')
+    args = parser.parse_args()
+    
+    walk_id(args.start_dir, args.output_pickle)

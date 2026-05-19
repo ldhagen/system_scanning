@@ -11,6 +11,7 @@ A high-performance scanner that traverses a directory tree and generates a Panda
   - Calculates MD5 hashes using chunked reading (memory-efficient).
   - Captures structured metadata: path, size, mtime (modification), ctime (creation), and mode.
   - Persists data as a compressed Pickle file for analysis in Jupyter Notebooks.
+  - **Dynamic Defaults:** If no output filename is provided, it defaults to `ldh_scan_YYYYMMDD_HHMMSS.pkl` using the current time.
 
 - **Usage:**
   ```bash
@@ -23,11 +24,13 @@ A utility for identifying and managing files with specific chronological naming 
 - **Features:**
   - Filters files by prefix, suffix, and fixed length.
   - Parses Date-Time Groups (DTG) from filenames into Python `datetime` objects.
+  - **Filesystem Boundary Awareness:** Stays within the initial filesystem. It will not traverse into mounted drives (e.g., `/proc`, `/sys`, external volumes) when scanning the host, but can still scan those drives if they are explicitly passed as the `<start_dir>`.
   - Includes a `copy_files` function to chronologically sequence files with adjustable time spacing.
+  - **Dynamic Defaults:** If no output filename is provided, it defaults to `DTGscan_YYYYMMDD_HHMMSS.pkl` using the current time.
 
 - **Usage:**
   ```bash
-  python3 walk_id.py <start_dir> <output_pickle>
+  python3 walk_id.py [start_dir] [output_pickle]
   ```
 
 ### 3. `filesystem_hash_review.ipynb`

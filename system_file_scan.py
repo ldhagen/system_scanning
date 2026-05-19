@@ -4,6 +4,7 @@ import hashlib
 import pickle
 import argparse
 import pandas as pd
+from datetime import datetime
 
 def calculate_md5(file_path, chunk_size=4096):
     """Calculate the MD5 hash of a file in chunks to be memory-efficient."""
@@ -51,11 +52,14 @@ def create_dataframe(passed_list):
     return pd.DataFrame(passed_list)
 
 def main():
+    dtg = datetime.now().strftime('%Y%m%d_%H%M%S')
+    default_output = f'ldh_scan_{dtg}.pkl'
+
     parser = argparse.ArgumentParser(description="System file scanner to generate file metadata and hashes.")
     parser.add_argument('Beginning_Search_Path', help='The root directory to start the search', 
                         nargs='?', default='/var/tmp/ldh/working/')
-    parser.add_argument('Output_Filename', help='The name of the output pickle file', 
-                        nargs='?', default='ldh_1_out')
+    parser.add_argument('Output_Filename', help=f'The name of the output pickle file (default: {default_output})', 
+                        nargs='?', default=default_output)
     args = parser.parse_args()
 
     if not os.path.exists(args.Beginning_Search_Path):
