@@ -15,7 +15,7 @@ def calculate_md5(file_path, chunk_size=4096):
             for chunk in iter(lambda: f.read(chunk_size), b""):
                 hash_md5.update(chunk)
         return hash_md5.hexdigest()
-    except (PermissionError, FileNotFoundError):
+    except (PermissionError, FileNotFoundError, OSError):
         return None
 
 def get_scan(passed_start):
@@ -27,18 +27,45 @@ def get_scan(passed_start):
     dir_count = 0
     file_count = 0
 
-    # Optional: Add directories you want to skip entirely to speed things up
-    exclude_dirs = {'.cache', '.local', '.rustup', '.nvm', 'node_modules', '.virtualenvs'}
+    # 1. Absolute paths of system directories to ignore completely
+    system_skip_dirs = {
+        '/proc',   # Process and kernel information
+        '/sys',    # System and hardware information
+        '/dev',    # Device files (contains infinite streams like /dev/zero)
+        '/run',    # Runtime variable data
+        '/tmp',    # Temporary files
+        '/mnt',    # Mounted filesystems (prevents scanning external/network drives)
+        '/media'   # Removable media
+    }
+
+    # 2. Folder names to skip regardless of where they are in the tree
+    general_skip_dirs = {
+        '.cache', '.local', '.rustup', '.nvm', 'node_modules', '.virtualenvs'
+    }
+
+    # 3. Specific massive or volatile files to skip
+    system_skip_files = {
+        '/swap.img',
+        '/swapfile'
+    }
 
     for root, dirs, files in os.walk(passed_start):
         dir_count += 1
         
-        # Modify the 'dirs' list in-place to prevent os.walk from entering excluded directories
-        dirs[:] = [d for d in dirs if d not in exclude_dirs]
+        # Modify the 'dirs' list in-place to prevent os.walk from entering excluded directories.
+        # We check both the generic folder name AND the absolute path.
+        dirs[:] = [
+            d for d in dirs 
+            if d not in general_skip_dirs and os.path.join(root, d) not in system_skip_dirs
+        ]
 
         for file in files:
             file_count += 1
             full_path = os.path.join(root, file)
+            
+            # Skip known massive system files immediately
+            if full_path in system_skip_files:
+                continue
             
             try:
                 # Get file stats BEFORE trying to read/hash it (use lstat to not follow symlinks)
@@ -53,11 +80,11 @@ def get_scan(passed_start):
                 if file_size_mb > 100:
                     print(f"\n[!] Notice: Hashing large file ({file_size_mb:.2f} MB): {full_path}")
                     
-            except (PermissionError, FileNotFoundError):
+            except (PermissionError, FileNotFoundError, OSError):
                 continue
 
             # Update the progress indicator less frequently to reduce I/O overhead
-            if file_count % 50 == 0:
+            if file_count % 100 == 0:
                 print(f"Scanned: {dir_count} directories, {file_count} files. Data points: {len(scan_data)}", end='\r')
             
             md5_hash = calculate_md5(full_path)
@@ -103,7 +130,7 @@ def main():
         pickle.dump(df, outw)
     
     print(f"Scan complete. Data saved to: {args.Output_Filename}")
-    print(f"Total files scanned: {len(df)}")
+    print(f"Total files hashed and recorded: {len(df)}")
 
 if __name__ == '__main__':
      main()
