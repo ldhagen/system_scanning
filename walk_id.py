@@ -42,7 +42,12 @@ def walk_id(start_dir=DEFAULT_START, out_pickle_name=None):
         print(f"Error accessing start directory {start_dir}: {e}")
         return
 
+    print(f"Starting scan in: {os.path.abspath(start_dir)}")
+    dir_count = 0
+    file_count = 0
+    
     for root, dirs, files in os.walk(start_dir):
+        dir_count += 1
         # Stay on the same filesystem to avoid mounted drives
         def is_same_dev(d):
             try:
@@ -53,6 +58,7 @@ def walk_id(start_dir=DEFAULT_START, out_pickle_name=None):
         dirs[:] = [d for d in dirs if is_same_dev(d)]
 
         for file in files:
+            file_count += 1
             if file.endswith(FILENAME_SUFFIX_CONST):
                 if len(file) == FILENAME_LENGTH_CONST:
                     if file.startswith(FILENAME_PREFIX_CONST):
@@ -64,10 +70,15 @@ def walk_id(start_dir=DEFAULT_START, out_pickle_name=None):
                         except ValueError:
                             # Skip files that don't match the DTG format
                             continue
+        
+        if dir_count % 10 == 0:
+            print(f"Scanned {dir_count} directories, {file_count} files. Matches found: {len(found_dict)}", end='\r')
 
+    print(f"\nScan complete. Found {len(found_dict)} matches in {file_count} files across {dir_count} directories.")
+    
     with open(out_pickle_name, 'wb') as ofile:
         pickle.dump(found_dict, ofile)
-    print(f"Scan complete. Found {len(found_dict)} files. Saved to {out_pickle_name}")
+    print(f"Results saved to {out_pickle_name}")
 
 def copy_files(pkl_dict_path, target_dir, spacing=3600):
     """

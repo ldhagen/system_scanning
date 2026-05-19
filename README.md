@@ -24,6 +24,7 @@ A utility for identifying and managing files with specific chronological naming 
 - **Features:**
   - Filters files by prefix, suffix, and fixed length.
   - Parses Date-Time Groups (DTG) from filenames into Python `datetime` objects.
+  - **Real-time Progress Reporting:** Provides live updates to stdout during the scan, showing the number of directories scanned, files processed, and matches found.
   - **Filesystem Boundary Awareness:** Stays within the initial filesystem. It will not traverse into mounted drives (e.g., `/proc`, `/sys`, external volumes) when scanning the host, but can still scan those drives if they are explicitly passed as the `<start_dir>`.
   - Includes a `copy_files` function to chronologically sequence files with adjustable time spacing.
   - **Dynamic Defaults:** If no output filename is provided, it defaults to `DTGscan_YYYYMMDD_HHMMSS.pkl` using the current time.
