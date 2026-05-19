@@ -5,6 +5,7 @@ import pickle
 import argparse
 import pandas as pd
 from datetime import datetime
+import stat
 
 def calculate_md5(file_path, chunk_size=4096):
     """Calculate the MD5 hash of a file in chunks to be memory-efficient."""
@@ -20,31 +21,59 @@ def calculate_md5(file_path, chunk_size=4096):
 def get_scan(passed_start):
     """
     Walk through the directory tree and gather file metadata.
-    Returns a list of tuples containing file info.
+    Returns a list of dictionaries containing file info.
     """
     scan_data = []
-    for root, _, files in os.walk(passed_start):
+    dir_count = 0
+    file_count = 0
+
+    # Optional: Add directories you want to skip entirely to speed things up
+    exclude_dirs = {'.cache', '.local', '.rustup', '.nvm', 'node_modules', '.virtualenvs'}
+
+    for root, dirs, files in os.walk(passed_start):
+        dir_count += 1
+        
+        # Modify the 'dirs' list in-place to prevent os.walk from entering excluded directories
+        dirs[:] = [d for d in dirs if d not in exclude_dirs]
+
         for file in files:
+            file_count += 1
             full_path = os.path.join(root, file)
-            print(f"Scanning: {full_path}")
+            
+            try:
+                # Get file stats BEFORE trying to read/hash it (use lstat to not follow symlinks)
+                file_stat = os.lstat(full_path)
+                
+                # Check if it's a regular file. If it's a socket, pipe, or symlink, skip it.
+                if not stat.S_ISREG(file_stat.st_mode):
+                    continue
+                
+                # If the file is larger than 100MB, print a warning so you know it's not frozen
+                file_size_mb = file_stat.st_size / (1024 * 1024)
+                if file_size_mb > 100:
+                    print(f"\n[!] Notice: Hashing large file ({file_size_mb:.2f} MB): {full_path}")
+                    
+            except (PermissionError, FileNotFoundError):
+                continue
+
+            # Update the progress indicator less frequently to reduce I/O overhead
+            if file_count % 50 == 0:
+                print(f"Scanned: {dir_count} directories, {file_count} files. Data points: {len(scan_data)}", end='\r')
             
             md5_hash = calculate_md5(full_path)
             if md5_hash is None:
                 continue
 
-            try:
-                file_stat = os.stat(full_path)
-                scan_data.append({
-                    'filename_full_path': full_path,
-                    'md5_hash': md5_hash,
-                    'size': file_stat.st_size,
-                    'mtime': file_stat.st_mtime,
-                    'ctime': file_stat.st_ctime,
-                    'mode': file_stat.st_mode
-                })
-            except (PermissionError, FileNotFoundError):
-                continue
+            scan_data.append({
+                'filename_full_path': full_path,
+                'md5_hash': md5_hash,
+                'size': file_stat.st_size,
+                'mtime': file_stat.st_mtime,
+                'ctime': file_stat.st_ctime,
+                'mode': file_stat.st_mode
+            })
                 
+    print(f"\nScan complete. Processed {file_count} files across {dir_count} directories.")
     return scan_data
 
 def create_dataframe(passed_list):
